@@ -71,6 +71,14 @@ optgroup{background:#100D07;color:#8A7048;font-style:normal}
     [style*="overflow: hidden"] { overflow: visible !important; }
     .print-section { page-break-inside: avoid; }
 }
+@media (max-width: 640px) {
+    .m-hide { display: none !important; }
+    .m-fullscreen { position: fixed !important; inset: 0 !important; width: 100vw !important; max-width: 100vw !important; min-height: 100vh !important; height: 100vh !important; border-radius: 0 !important; margin: 0 !important; }
+    .m-pad-bottom { padding-bottom: 68px !important; }
+    .m-sidebar-overlay { position: fixed !important; top: 0 !important; left: 0 !important; height: 100vh !important; width: 82vw !important; max-width: 320px !important; z-index: 300 !important; overflow-y: auto !important; }
+    button, select, input { min-height: 36px; }
+    .gi { font-size: 16px !important; padding: 10px 12px !important; }
+}
 </style>
 </head>
 <body>
@@ -2566,6 +2574,9 @@ function App() {
     }, []);
     const dragRef = React.useRef(null);
     const [syncStatus, setSyncStatus] = React.useState('');
+    const [isMobile, setIsMobile] = React.useState(window.innerWidth <= 640);
+    const [showMobileSidebar, setShowMobileSidebar] = React.useState(false);
+    React.useEffect(function(){ function chk(){ setIsMobile(window.innerWidth<=640); } window.addEventListener('resize',chk); return function(){ window.removeEventListener('resize',chk); }; }, []);
     React.useEffect(function(){ gSync.onStatus(function(s){ setSyncStatus(s); setTimeout(function(){ setSyncStatus(function(cur){ return cur===s?'':cur; }); }, 4000); }); }, []);
     const persist = useCallback(function (next) { if (dbRef.current) undoRef.current = undoRef.current.slice(-24).concat([dbRef.current]); setDb(next); store.set(SK, next); idb.save(next); gSync.schedSave(next); }, []);
     const saveSettings = useCallback(function (next) { setSettings(next); store.set("cabinet-settings", next); }, []);
@@ -2684,7 +2695,7 @@ function App() {
             React.createElement("div", { style: { padding: "7px 16px 0", display: "flex", alignItems: "center", gap: 10, justifyContent: "space-between" } },
                 React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
                     React.createElement(Logo, null),
-                    React.createElement("div", null,
+                    !isMobile && React.createElement("div", null,
                         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 3 } },
                             React.createElement("span", { style: { fontFamily: "'Cinzel Decorative',serif", fontSize: 11, color: C.goldB, opacity: .7 } }, "\u2625"),
                             React.createElement("span", { style: { fontSize: 9, color: C.goldB, opacity: .5 } }, "\u2600"),
@@ -2700,11 +2711,11 @@ function App() {
                             React.createElement("span", { style: { fontSize: 9, color: C.goldB, opacity: .5 } }, "\u2600"),
                             React.createElement("span", { style: { fontFamily: "'Cinzel Decorative',serif", fontSize: 11, color: C.goldB, opacity: .7 } }, "\u2625")),
                         React.createElement("div", { style: { fontSize: 7, color: C.sandM, letterSpacing: "0.18em", textTransform: "uppercase", marginTop: 1 } }, "Cabinet du Collectionneur"))),
-                React.createElement("div", { style: { display: "flex", gap: 14, alignItems: "center" } },
-                    [[gOwned, "Possédés", C.owned], [gWish, "Souhaités", C.wish], [flat.length, "Total", C.gold]].map(function ([v, l, c]) { return (React.createElement("div", { key: l, style: { textAlign: "center" } },
+                React.createElement("div", { style: { display: "flex", gap: isMobile?8:14, alignItems: "center" } },
+                    !isMobile && [[gOwned, "Possédés", C.owned], [gWish, "Souhaités", C.wish], [flat.length, "Total", C.gold]].map(function ([v, l, c]) { return (React.createElement("div", { key: l, style: { textAlign: "center" } },
                         React.createElement("div", { style: { fontFamily: "'Cinzel Decorative',serif", fontSize: 17, color: c, lineHeight: 1 } }, v),
                         React.createElement("div", { style: { fontSize: 7, color: C.sandM, letterSpacing: "0.1em", textTransform: "uppercase" } }, l))); }),
-                    React.createElement("div", { style: { display:"flex", gap:5, alignItems:"center", borderLeft:"1px solid "+C.border, paddingLeft:10 } },
+                    !isMobile && React.createElement("div", { style: { display:"flex", gap:5, alignItems:"center", borderLeft:"1px solid "+C.border, paddingLeft:10 } },
                         COLS.map(function(col) {
                             var colItems = db[col.id]||[]; var colOwned = colItems.filter(function(i){return i.status==="owned";}).length; var pct = colItems.length>0?Math.round(colOwned/colItems.length*100):0;
                             return React.createElement("div", { key:col.id, title:col.name+" : "+colOwned+"/"+colItems.length+" ("+pct+"%)", style:{display:"flex",flexDirection:"column",alignItems:"center",gap:3,cursor:"default"} },
@@ -2719,10 +2730,11 @@ function App() {
                         )
                     ),
                     React.createElement("div", { style: { display: "flex", gap: 5 } },
-                        React.createElement("button", { onClick: function () { setGlobalSearch(true); }, title: "Recherche globale (Ctrl+K)", style: { background: "transparent", border: `1px solid ${C.border}`, borderRadius: 3, width: 26, height: 26, cursor: "pointer", color: C.sandM, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center" }, onMouseEnter: function (e) { e.currentTarget.style.color = C.gold; }, onMouseLeave: function (e) { e.currentTarget.style.color = C.sandM; } }, "🔍"),
-                        React.createElement("button", { onClick: function () { setModal({ type: "export" }); }, title: "Export/Import", style: { background: "transparent", border: `1px solid ${C.border}`, borderRadius: 3, width: 26, height: 26, cursor: "pointer", color: C.sandM, fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center" }, onMouseEnter: function (e) { e.currentTarget.style.color = C.gold; }, onMouseLeave: function (e) { e.currentTarget.style.color = C.sandM; } }, "\uD83D\uDCE6"),
-                        React.createElement("button", { onClick: function () { setModal({ type: "settings" }); }, title: "Param\u00E8tres", style: { background: "transparent", border: `1px solid ${C.border}`, borderRadius: 3, width: 26, height: 26, cursor: "pointer", color: C.sandM, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center" }, onMouseEnter: function (e) { e.currentTarget.style.color = C.gold; }, onMouseLeave: function (e) { e.currentTarget.style.color = C.sandM; } }, "\u2699")))),
-            React.createElement("div", { style: { display: "flex", paddingLeft: 12, paddingRight: 12, marginTop: 6, gap: 2, overflowX: "auto" } },
+                        isMobile && store.get('gh_token') && React.createElement("div", { title: syncStatus.startsWith('ok')?"✓ Sync":"☁", style:{fontSize:13,color:syncStatus.startsWith('ok')?"#4CAF50":syncStatus==='syncing'?C.gold:syncStatus.startsWith('err')?"#E03030":C.sandM,display:"flex",alignItems:"center",animation:syncStatus==='syncing'?"shimmer 0.8s infinite":"none"} }, syncStatus==='syncing'?"↻":syncStatus.startsWith('ok')?"✓":syncStatus.startsWith('err')?"⚠":"☁"),
+                        React.createElement("button", { onClick: function () { setGlobalSearch(true); }, title: "Recherche globale (Ctrl+K)", style: { background: "transparent", border: `1px solid ${C.border}`, borderRadius: 3, width: 36, height: 36, cursor: "pointer", color: C.sandM, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }, onMouseEnter: function (e) { e.currentTarget.style.color = C.gold; }, onMouseLeave: function (e) { e.currentTarget.style.color = C.sandM; } }, "🔍"),
+                        React.createElement("button", { onClick: function () { setModal({ type: "export" }); }, title: "Export/Import", style: { background: "transparent", border: `1px solid ${C.border}`, borderRadius: 3, width: 36, height: 36, cursor: "pointer", color: C.sandM, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }, onMouseEnter: function (e) { e.currentTarget.style.color = C.gold; }, onMouseLeave: function (e) { e.currentTarget.style.color = C.sandM; } }, "\uD83D\uDCE6"),
+                        React.createElement("button", { onClick: function () { setModal({ type: "settings" }); }, title: "Param\u00E8tres", style: { background: "transparent", border: `1px solid ${C.border}`, borderRadius: 3, width: 36, height: 36, cursor: "pointer", color: C.sandM, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }, onMouseEnter: function (e) { e.currentTarget.style.color = C.gold; }, onMouseLeave: function (e) { e.currentTarget.style.color = C.sandM; } }, "\u2699")))),
+            !isMobile && React.createElement("div", { style: { display: "flex", paddingLeft: 12, paddingRight: 12, marginTop: 6, gap: 2, overflowX: "auto" } },
                 (function () {
                     const isA = tab === "dashboard";
                     return (React.createElement("button", { onClick: function () { setTab("dashboard"); }, style: { padding: "7px 13px", border: "none", cursor: "pointer", background: isA ? C.gold + "18" : "transparent", color: isA ? C.gold : C.sandM, borderRadius: "4px 4px 0 0", borderBottom: isA ? `2px solid ${C.gold}` : "none", display: "flex", alignItems: "center", gap: 6, fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: "0.06em", textTransform: "uppercase", whiteSpace: "nowrap", flexShrink: 0 } },
@@ -2741,11 +2753,15 @@ function App() {
                         React.createElement("span", { style: { fontSize: 7, padding: "1px 5px", borderRadius: 10, background: isA ? c.color + "28" : "rgba(255,255,255,0.04)", color: isA ? c.color : C.sandM } }, cnt)));
                 }))),
         tab === "dashboard" ? (React.createElement("main", { style: { flex: 1, overflow: "hidden", background: C.bg } },
-            React.createElement(Dashboard, { db: db, onCheck: function(){ setCheckMode(true); }, C: C }))) : (React.createElement("div", { style: { flex: 1, display: "flex", overflow: "hidden" } },
-            React.createElement(Sidebar, { col: col, all: all, filt: filt, setFilt: setFilt, statusF: statusF, setStatusF: setStatusF, search: search, setSearch: setSearch, C: C }),
-            React.createElement("main", { ref: mainRef, onClick: function(){ setFocusedIdx(-1); }, onScroll: function(e){ setScrollTop(e.currentTarget.scrollTop); }, style: { flex: 1, overflow: "auto", padding: "14px 16px" } },
+            React.createElement(Dashboard, { db: db, onCheck: function(){ setCheckMode(true); }, C: C }))) : (React.createElement("div", { style: { flex: 1, display: "flex", overflow: "hidden", position: "relative" } },
+            isMobile && showMobileSidebar && React.createElement("div", { onClick: function(){ setShowMobileSidebar(false); }, style: { position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:299 } }),
+            React.createElement("div", { className: isMobile ? "m-sidebar-overlay" : "", style: isMobile ? { background: C.bg, borderRight: "1px solid "+C.border, transform: showMobileSidebar ? "translateX(0)" : "translateX(-110%)", transition: "transform .25s ease", willChange: "transform" } : {} },
+                React.createElement(Sidebar, { col: col, all: all, filt: filt, setFilt: setFilt, statusF: statusF, setStatusF: setStatusF, search: search, setSearch: setSearch, C: C,
+                    onMobileClose: isMobile ? function(){ setShowMobileSidebar(false); } : null })),
+            React.createElement("main", { ref: mainRef, onClick: function(){ setFocusedIdx(-1); }, onScroll: function(e){ setScrollTop(e.currentTarget.scrollTop); }, style: { flex: 1, overflow: "auto", padding: isMobile ? "10px 10px 80px" : "14px 16px" } },
                 React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 } },
                     React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" } },
+                        isMobile && React.createElement("button", { onClick: function(){ setShowMobileSidebar(true); }, style: { padding:"6px 12px", background: C.card, border: "1px solid "+C.border, borderRadius: 3, cursor: "pointer", color: C.sandM, fontSize: 12, display:"flex", alignItems:"center", gap:5 } }, "☰ Filtres"),
                         React.createElement("div", { style: { fontFamily: "'Cinzel',serif", fontSize: 9, color: C.sandM } }, shown.length === all.length ? all.length + " inscription" + (all.length !== 1 ? "s" : "") : shown.length + "/" + all.length),
                         React.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center" } },
                             React.createElement("div", { style: { display:"flex", alignItems:"center", background:C.card, border:`1px solid ${C.border}`, borderRadius:3, overflow:"hidden" } }, [0,4,6,9,12,20,30].map(function(n){ return React.createElement("button", { key:n, onClick:function(){ setPerLine(n); }, style:{ padding:"3px 7px", border:"none", borderRight:`1px solid ${C.border}`, cursor:"pointer", fontSize:8, fontFamily:"'Cinzel',serif", background: perLine===n ? C.gold+"28" : "transparent", color: perLine===n ? C.gold : C.sandM, transition:"all .12s", minWidth:22 } }, n===0?"auto":n); })),
@@ -2810,6 +2826,22 @@ function App() {
         modal && modal.type === "export" && React.createElement(ExportImportModal, { db: db, onImport: function (d) { if (d)
                 persist(d); }, onClose: function () { setModal(null); }, C: C }),
         React.createElement("div", { style: { position: "fixed", bottom: 5, right: 10, fontSize: 8, color: C.sandM, opacity: .35, fontFamily: "'Cinzel',serif", letterSpacing: "0.06em", pointerEvents: "none" } }, "Entr\u00e9e Enregistrer \u00B7 Espace / Rechercher \u00B7 B S\u00E9lection \u00B7 Esc Fermer"),
+        isMobile && React.createElement("nav", { style: { position:"fixed", bottom:0, left:0, right:0, height:56, background:C.bg, borderTop:"1px solid "+C.border, display:"flex", alignItems:"center", zIndex:200, boxShadow:"0 -4px 20px rgba(0,0,0,0.6)" } },
+            React.createElement("button", { onClick:function(){ setTab("dashboard"); }, style:{ flex:1, height:"100%", background:"transparent", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:2, color: tab==="dashboard"?C.gold:C.sandM } },
+                React.createElement(ICONS.dashboard, null),
+                React.createElement("span", { style:{fontSize:7,fontFamily:"'Cinzel',serif",letterSpacing:"0.06em"} }, "Tableau")
+            ),
+            COLS.map(function(c){
+                var isA=c.id===tab;
+                var Ic=ICONS[c.id];
+                var cnt=(db&&db[c.id]&&db[c.id].length)||0;
+                return React.createElement("button", { key:c.id, onClick:function(){ setTab(c.id); }, style:{ flex:1, height:"100%", background:"transparent", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:2, color:isA?c.color:C.sandM, position:"relative" } },
+                    cnt>0 && React.createElement("span", { style:{ position:"absolute", top:6, right:"calc(50% - 14px)", fontSize:7, background:isA?c.color:"rgba(255,255,255,0.15)", color: isA?"#000":C.sandM, borderRadius:8, padding:"0 3px", minWidth:12, textAlign:"center" } }, cnt),
+                    React.createElement(Ic, null),
+                    React.createElement("span", { style:{fontSize:7,fontFamily:"'Cinzel',serif",letterSpacing:"0.04em",whiteSpace:"nowrap"} }, c.name.split(" ")[0])
+                );
+            })
+        ),
         globalSearch && React.createElement(GlobalSearch, { db: db, COLS: COLS, onNavigate: function(id){ setTab(id); }, onClose: function(){ setGlobalSearch(false); }, C: C }),
         slideshow && React.createElement(SlideshowMode, { items: shown.length ? shown : all, colId: tab, col: col, C: C, onClose: function(){ setSlideshow(false); } }),
         undoToast && React.createElement("div", { style: { position:"fixed", bottom:36, left:"50%", transform:"translateX(-50%)", background:C.card, border:"1px solid "+C.border, borderRadius:4, padding:"7px 18px", color:C.sand, fontSize:10, fontFamily:"'Cinzel',serif", zIndex:9999, boxShadow:"0 4px 24px rgba(0,0,0,0.6)", letterSpacing:"0.08em", pointerEvents:"none" } }, "\u21A9 Action annul\u00E9e")));
