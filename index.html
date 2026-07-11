@@ -3890,8 +3890,8 @@ function App() {
             React.createElement("img", { src: __MANDALA_HERO, alt:"Cabinet Égyptien - Veille" }),
             React.createElement("div", { className:"idle-hint" }, "Toucher pour revenir")),
         React.createElement("div", { style: { position: "fixed", bottom: 5, right: 10, fontSize: 8, color: C.sandM, opacity: .35, fontFamily: "'Cinzel',serif", letterSpacing: "0.06em", pointerEvents: "none" } }, "Entr\u00e9e Enregistrer \u00B7 Espace / Rechercher \u00B7 B S\u00E9lection \u00B7 Esc Fermer"),
-        isMobile && React.createElement("nav", { style: { position:"fixed", bottom:0, left:0, right:0, height:56, background:C.bg, borderTop:"1px solid "+C.border, display:"flex", alignItems:"center", zIndex:200, boxShadow:"0 -4px 20px rgba(0,0,0,0.6)" } },
-            React.createElement("button", { onClick:function(){ setTab("dashboard"); }, style:{ flex:1, height:"100%", background:"transparent", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:2, color: tab==="dashboard"?C.gold:C.sandM } },
+        isMobile && React.createElement("nav", { style: { position:"fixed", bottom:0, left:0, right:0, height:56, background:C.bg, borderTop:"1px solid "+C.border, display:"flex", alignItems:"center", zIndex:200, boxShadow:"0 -4px 20px rgba(0,0,0,0.6)", overflowX:"auto", WebkitOverflowScrolling:"touch" } },
+            React.createElement("button", { onClick:function(){ setTab("dashboard"); }, style:{ flex:"0 0 52px", width:52, height:"100%", background:"transparent", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:2, color: tab==="dashboard"?C.gold:C.sandM } },
                 React.createElement(ICONS.dashboard, null),
                 React.createElement("span", { style:{fontSize:7,fontFamily:"'Cinzel',serif",letterSpacing:"0.06em"} }, "Tableau")
             ),
@@ -3899,7 +3899,7 @@ function App() {
                 var isA=c.id===tab;
                 var Ic=ICONS[c.id];
                 var cnt=(db&&db[c.id]&&db[c.id].length)||0;
-                return React.createElement("button", { key:c.id, onClick:function(){ setTab(c.id); }, style:{ flex:1, height:"100%", background:"transparent", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:2, color:isA?c.color:C.sandM, position:"relative" } },
+                return React.createElement("button", { key:c.id, onClick:function(){ setTab(c.id); }, style:{ flex:"0 0 52px", width:52, height:"100%", background:"transparent", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:2, color:isA?c.color:C.sandM, position:"relative" } },
                     cnt>0 && React.createElement("span", { style:{ position:"absolute", top:6, right:"calc(50% - 14px)", fontSize:7, background:isA?c.color:"rgba(255,255,255,0.15)", color: isA?"#000":C.sandM, borderRadius:8, padding:"0 3px", minWidth:12, textAlign:"center" } }, cnt),
                     React.createElement(Ic, null),
                     React.createElement("span", { style:{fontSize:7,fontFamily:"'Cinzel',serif",letterSpacing:"0.04em",whiteSpace:"nowrap"} }, c.name.split(" ")[0])
