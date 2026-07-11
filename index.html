@@ -135,36 +135,94 @@ const idb = (function(){
     };
 }());
 const gSync = (function(){
-    var GF = 'cabinet-egyptien.json';
+    var COLS_IDS = ['pokemon','yugioh','manga','funko','naruto','orica','kayou','dbs','duelmasters','digimon','boardgames','figurines','autres'];
+    var META_FILE = '_meta.json';
     var _timer = null; var _cb = null;
     function _notify(s){ if(_cb) _cb(s); }
+
+    // Supprimer les images base64 avant sync (trop lourdes, restent locales)
+    function stripBase64(items){
+        if(!Array.isArray(items)) return items;
+        return items.map(function(item){
+            var out = Object.assign({}, item);
+            if(out.image && out.image.startsWith('data:')) out.image = '';
+            if(out.image2 && out.image2.startsWith('data:')) out.image2 = '';
+            return out;
+        });
+    }
+
+    // Compresser si besoin
+    function compress(str){
+        return _lz && str.length > 100000 ? '___LZ___' + _lz.compressToBase64(str) : str;
+    }
+    function decompress(str){
+        return str && str.startsWith('___LZ___') && _lz ? _lz.decompressFromBase64(str.slice(8)) : str;
+    }
+
     async function save(db){
         var tok = store.get('gh_token'); if(!tok) return;
         var gid = store.get('gh_gist');
         _notify('syncing');
         try {
-            var r = await fetch(gid ? 'https://api.github.com/gists/'+gid : 'https://api.github.com/gists', {
-                method: gid ? 'PATCH' : 'POST',
-                headers: {'Authorization':'token '+tok,'Content-Type':'application/json'},
-                body: JSON.stringify({description:'Cabinet Égyptien — sync auto',public:false,files:{[GF]:{content:JSON.stringify(Object.assign({},db,{_pseudo:store.get('pseudo')||''}))}}})
+            // Construire un fichier par collection + un fichier meta
+            var files = {};
+            var meta = { _pseudo: store.get('pseudo')||'', _v: 2, _ts: Date.now(), _cols: {} };
+            COLS_IDS.forEach(function(id){
+                var items = stripBase64(db[id] || []);
+                meta._cols[id] = items.length;
+                var content = compress(JSON.stringify(items));
+                files['col_' + id + '.json'] = { content: content };
             });
+            files[META_FILE] = { content: JSON.stringify(meta) };
+
+            var r = await fetch(
+                gid ? 'https://api.github.com/gists/'+gid : 'https://api.github.com/gists',
+                { method: gid ? 'PATCH' : 'POST',
+                  headers: {'Authorization':'token '+tok,'Content-Type':'application/json'},
+                  body: JSON.stringify({description:'Cabinet Égyptien v2 — sync',public:false,files:files}) }
+            );
             if(!r.ok) throw new Error('HTTP '+r.status);
             var d = await r.json();
-            if(!gid){ store.set('gh_gist', d.id); }
-            _notify('ok');
+            if(!gid) store.set('gh_gist', d.id);
+            _notify('ok:' + Object.values(meta._cols).reduce(function(a,b){return a+b;},0) + ' produits');
         } catch(e){ _notify('err:'+e.message); }
     }
+
     async function load(){
         var tok = store.get('gh_token'); var gid = store.get('gh_gist');
         if(!tok||!gid) throw new Error('Token ou Gist ID manquant');
-        var r = await fetch('https://api.github.com/gists/'+gid, {headers:{'Authorization':'token '+tok}});
+        var r = await fetch('https://api.github.com/gists/'+gid,
+            {headers:{'Authorization':'token '+tok}});
         if(!r.ok) throw new Error('HTTP '+r.status);
         var g = await r.json();
-        var f = g.files[GF]; if(!f) throw new Error('Fichier introuvable');
-        return JSON.parse(f.content);
+
+        // Format v2 : un fichier par collection
+        if(g.files[META_FILE]){
+            var db = {};
+            for(var i=0;i<COLS_IDS.length;i++){
+                var id = COLS_IDS[i];
+                var f = g.files['col_'+id+'.json'];
+                if(f){
+                    var raw = f.content || (f.truncated ? await (await fetch(f.raw_url)).text() : '[]');
+                    db[id] = JSON.parse(decompress(raw)) || [];
+                } else { db[id] = []; }
+            }
+            var meta = JSON.parse(g.files[META_FILE].content||'{}');
+            if(meta._pseudo) store.set('pseudo', meta._pseudo);
+            return db;
+        }
+
+        // Format v1 (ancien format monofichier) — rétrocompatibilité
+        var legacy = g.files['cabinet-egyptien.json'];
+        if(!legacy) throw new Error('Fichier introuvable');
+        var content = legacy.truncated
+            ? await (await fetch(legacy.raw_url)).text()
+            : legacy.content;
+        return JSON.parse(decompress(content));
     }
+
     return {
-        schedSave: function(db){ clearTimeout(_timer); _timer = setTimeout(function(){ save(db); }, 4000); },
+        schedSave: function(db){ clearTimeout(_timer); _timer = setTimeout(function(){ save(db); }, 8000); },
         saveNow: save, load: load,
         onStatus: function(fn){ _cb = fn; }
     };
@@ -3443,7 +3501,26 @@ function App() {
     const [selected, setSelected] = useState(new Set());
     const [settings, setSettings] = useState({ theme: "dark", currency: "EUR", fontSize: "normal", fontFamily: "theme" });
     const [boot, setBoot] = useState(true);
-    useEffect(function () { const saved = store.get(SK); setDb(saved ? Object.assign({ pokemon:[], yugioh:[], manga:[], funko:[], naruto:[], orica:[], kayou:[], dbs:[], duelmasters:[], digimon:[], boardgames:[], figurines:[], autres:[] }, saved) : { pokemon:[], yugioh:[], manga:[], funko:[], naruto:[], orica:[], kayou:[], dbs:[], duelmasters:[], digimon:[], boardgames:[], figurines:[], autres:[] }); const s = Object.assign({ theme: "dark", currency: "EUR", fontSize: "normal", fontFamily: "theme" }, store.get("cabinet-settings") || {}); setSettings(s); setBoot(false); }, []);
+    useEffect(function () {
+    var EMPTY = { pokemon:[], yugioh:[], manga:[], funko:[], naruto:[], orica:[], kayou:[], dbs:[], duelmasters:[], digimon:[], boardgames:[], figurines:[], autres:[] };
+    function applyData(data) {
+        setDb(data ? Object.assign(Object.assign({}, EMPTY), data) : EMPTY);
+        var s = Object.assign({ theme: "dark", currency: "EUR", fontSize: "normal", fontFamily: "theme" }, store.get("cabinet-settings") || {});
+        setSettings(s); setBoot(false);
+    }
+    // Priorité IndexedDB (pas de limite de taille)
+    idb.load(function(idbData) {
+        if (idbData && Object.values(idbData).some(function(a) { return Array.isArray(a) && a.length > 0; })) {
+            applyData(idbData);
+        } else {
+            // Fallback localStorage (petits volumes)
+            var lsData = null;
+            try { lsData = store.get(SK); } catch(e) {}
+            if (lsData) idb.save(lsData); // migrer vers IDB
+            applyData(lsData);
+        }
+    });
+}, []);
     useEffect(function () { document.body.className = settings.theme === "light" ? "light" : ""; }, [settings.theme]);
     // Font size and family applied in render via zoom + style injection
     useEffect(function () { setSearch(""); setFilt({}); setStatusF("all"); setViewMode("grid"); setSortBy("val_asc"); setBulkMode(false); setSelected(new Set()); setScrollTop(0); }, [tab]);
@@ -3613,7 +3690,17 @@ function App() {
         .catch(function(e){ clearTimeout(timeout); stopErr('Erreur réseau : '+e.message+'\n(Ouvrez la console pour plus de détails)'); });
     }, []);
     React.useEffect(function(){ gSync.onStatus(function(s){ setSyncStatus(s); setTimeout(function(){ setSyncStatus(function(cur){ return cur===s?'':cur; }); }, 4000); }); }, []);
-    const persist = useCallback(function (next) { if (dbRef.current) undoRef.current = undoRef.current.slice(-24).concat([dbRef.current]); setDb(next); store.set(SK, next); idb.save(next); gSync.schedSave(next); }, []);
+    const persist = useCallback(function (next) {
+    if (dbRef.current) undoRef.current = undoRef.current.slice(-24).concat([dbRef.current]);
+    setDb(next);
+    idb.save(next); // IndexedDB : pas de limite
+    gSync.schedSave(next);
+    // localStorage seulement si données < 3 MB
+    try {
+        var raw = JSON.stringify(next);
+        if (raw.length < 3 * 1024 * 1024) store.set(SK, next);
+    } catch(e) {}
+}, []);
     const saveSettings = useCallback(function (next) { setSettings(next); store.set("cabinet-settings", next); }, []);
     const col = COLS.find(function (c) { return c.id === tab; });
     const all = db && db[tab] || [];
