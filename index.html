@@ -889,7 +889,7 @@ function Dashboard({ db, onCheck, C }) {
     function onItemLeave(){ setHovCard(null); }
     const COL_COLORS = { pokemon: "#D03030", yugioh: "#8B5E3C", manga: "#808080", funko: "#20A8C8", naruto: "#E87820", orica: "#9C27B0", kayou: "#E53935", dbs: "#FF8F00", duelmasters: "#1565C0", digimon: "#00897B", boardgames: "#558B2F", figurines: "#78909C", autres: "#6D4C41" };
     const COL_NAMES = { pokemon: "Pokémon TCG", yugioh: "Yu-Gi-Oh!", manga: "Mangas", funko: "Funko POP", naruto: "Naruto Mythos", orica: "ORICA", kayou: "Naruto KAYOU", dbs: "Dragon Ball Super", duelmasters: "Duel Masters", digimon: "Digimon TCG", boardgames: "Jeux de société", figurines: "Figurines", autres: "Autres produits" };
-    const flat = Object.entries(db).flatMap(function ([colId, items]) { return items.map(function (i) { return Object.assign(Object.assign({}, i), { colId }); }); });
+    const flat = Object.entries(db).flatMap(function ([colId, items]) { return (Array.isArray(items) ? items : []).map(function (i) { return Object.assign(Object.assign({}, i), { colId }); }); });
     const owned = flat.filter(function (i) { return i.status === "owned"; });
     const wished = flat.filter(function (i) { return i.status === "wishlist"; });
     const favs = owned.filter(function (i) { return i.favorite; });
